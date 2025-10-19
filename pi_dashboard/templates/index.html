@@ -1,0 +1,58 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard Monitoreo & Control</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Monitoreo y Control</h1>
+    <p>DS18B20 + Bomba + Relé V</p>
+  </header>
+
+  <main>
+    <section class="cards">
+      <div class="card">
+        <h3>Temperaturas</h3>
+        <div id="temps"></div>
+        <p><strong>Promedio:</strong> <span id="avg">--</span></p>
+        <p><strong>Última lectura:</strong> <span id="ts">--</span></p>
+      </div>
+
+      <div class="card">
+        <h3>GPIO</h3>
+        <ul>
+          <li>Bomba: <span id="gpio-bomba" class="status off">--</span></li>
+          <li>Relé V: <span id="gpio-relev" class="status off">--</span></li>
+          <li>Trigger: <span id="gpio-trigger" class="status">--</span></li>
+        </ul>
+        <div class="controls">
+          <button id="bomba-on">Bomba ON</button>
+          <button id="bomba-off">Bomba OFF</button>
+          <button id="relev-on">Relé V ON</button>
+          <button id="relev-off">Relé V OFF</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Temperaturas (últimos 10 min)</h3>
+      <canvas id="chart"></canvas>
+    </section>
+  </main>
+
+  <footer>
+    <small>Raspberry Pi Dashboard • hecho con Flask + Socket.IO</small>
+  </footer>
+
+  <script>
+    const SENSOR_ALIASES = {{ sensor_aliases|tojson }};
+  </script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

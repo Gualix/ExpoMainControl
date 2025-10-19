@@ -7,7 +7,7 @@
  Plataforma: Raspberry Pi 4 (Raspberry Pi OS)
 
 
-Actualizado al 19 de octubre, 2025
+Actualizado al 10 de agosto, 2025
  Descripción:
    - Lee 3 sensores DS18B20 (bus 1-Wire en GPIO4).
    - Calcula el promedio de las lecturas válidas.
@@ -45,9 +45,18 @@ import RPi.GPIO as GPIO
 # CONFIGURACIÓN RÁPIDA 
 # ============================================================================
 UMBRAL_ACTIVACION_C = 22.0   # Umbral de Temperatura: bomba ON si promedio > este valor (°C)
-INTERVALO_SEG = 5          # Intervalo de muestreo en segundos
+INTERVALO_SEG = 5            # Intervalo de muestreo en segundos
 
-BOMBA_PIN = 27               # GPIO BCM del módulo de bomba (relé)
+BOMBA_PIN = 27               
+
+# --- Nuevo: pines para monitor y relé V ---
+# Pin de entrada que se leerá constantemente (BCM).
+TRIGGER_PIN = 23   # < Este es el pin que lee la entrada
+# Salida para el relé V (BCM).
+RELE_V_PIN  = 22   # <-- Aqui se conecta el nuevo rele
+#-----------------------------------------------------------------------------
+
+# GPIO BCM del módulo de bomba (relé)
 BOMBA_ACTIVE_LEVEL = 1       # 0 = active LOW (común), 1 = active HIGH
 
 SENSOR_ALIASES = ["sensor_1", "sensor_2", "sensor_3"]
@@ -58,7 +67,7 @@ SENSOR_ALIASES = ["sensor_1", "sensor_2", "sensor_3"]
 W1_BASE = Path("/sys/bus/w1/devices")
 MEDICIONES_DIR = Path("mediciones")   # Carpeta de salida para CSV
 REINTENTOS = 3
-ESPERA_REINTENTO = 0.2  # está en segundos
+ESPERA_REINTENTO = 0.2  # s
 
 # (Se define LOG_FILE dinámicamente en runtime para que cada ejecución cree uno nuevo)
 LOG_FILE = None
@@ -145,6 +154,46 @@ def bomba_on():
 def bomba_off():
     GPIO.output(BOMBA_PIN, _nivel_inactivo())
 
+
+# ---------------- Nuevas utilidades: Relé V e input de disparo ----------------
+def rele_v_setup():
+    """Configura el pin del relé V como salida."""
+    GPIO.setup(RELE_V_PIN, GPIO.OUT, initial=_nivel_inactivo())
+
+def rele_v_on():
+    GPIO.output(RELE_V_PIN, _nivel_activo())
+
+def rele_v_off():
+    GPIO.output(RELE_V_PIN, _nivel_inactivo())
+
+def _on_trigger_edge(channel):
+    """Callback cuando cambia el pin de entrada.
+    Si está en alto -> enciende relé V; si está en bajo -> apaga relé V."""
+    try:
+        val = GPIO.input(TRIGGER_PIN)
+        if val:
+            rele_v_on()
+        else:
+            rele_v_off()
+    except Exception as e:
+        print(f"[WARN] Callback trigger falló: {e}")
+
+def trigger_setup():
+    """Configura el pin TRIGGER_PIN como entrada con PULL-DOWN y detección por interrupciones."""
+    GPIO.setup(TRIGGER_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    # Detección en ambos flancos para reflejar ON/OFF del relé V según el estado del pin
+    GPIO.add_event_detect(TRIGGER_PIN, GPIO.BOTH, callback=_on_trigger_edge, bouncetime=150)
+
+def gpio_setup_all():
+    """Inicializa GPIO y configura bomba, relé V y el pin de disparo."""
+    GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BCM)
+    # Salidas
+    bomba_setup()
+    rele_v_setup()
+    # Entradas + eventos
+    trigger_setup()
+
 # ============================================================================
 # Programa principal
 # ============================================================================
@@ -170,7 +219,7 @@ def main():
 
     # 3- Iniciar CSV y GPIO de bomba
     inicializar_log(SENSOR_ALIASES)
-    bomba_setup()
+    gpio_setup_all()
     bomba_off()
     estado_bomba = False
 
@@ -224,6 +273,7 @@ def main():
         print("\nFinalizado por el usuario.")
     finally:
         bomba_off()
+        rele_v_off()
         GPIO.cleanup()
         print("GPIO limpio. CSV en:", LOG_FILE.resolve())
 
