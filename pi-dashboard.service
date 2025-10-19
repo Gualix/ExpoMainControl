@@ -1,0 +1,23 @@
+[Unit]
+Description=Pi Dashboard (Flask + Socket.IO)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=Arkan
+WorkingDirectory=/home/Arkan/Desktop/ExpoMainControl/pi_dashboard
+# Python del entorno virtual
+ExecStart=/home/Arkan/venvs/pi-dashboard/bin/python /home/Arkan/Desktop/ExpoMainControl/pi_dashboard/app.py
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+# (opcional) Si quieres cambiar el puerto: añade variable de entorno y léela en app.py
+# Environment=PORT=8080
+
+# Logs más legibles
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
