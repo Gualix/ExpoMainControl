@@ -56,7 +56,7 @@ function pushSample(ts, temps) {
     chart.data.datasets[i].data.push(v);
   });
   // mantener ~10 minutos si INTERVALO_SEG ~2s => 300 puntos
-  if (chart.data.labels.length > 300) {
+  if (chart.data.labels.length > 120) {
     chart.data.labels.shift();
     chart.data.datasets.forEach(ds => ds.data.shift());
   }
